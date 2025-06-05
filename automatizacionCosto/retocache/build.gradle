@@ -1,19 +1,92 @@
-plugins {
-    id("java")
+//repositorio y dependencias para configurar gradle
+// Es para descargar las dependencias que configuraran a Gradle como tal, no hacen parte del codigo fuente.
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        // De aqui viene el plugin aggregator que esta en la linea 4
+        classpath("net.serenity-bdd:serenity-gradle-plugin:2.0.80")
+    }
 }
 
-group = "org.example"
-version = "1.0-SNAPSHOT"
+plugins {
+    id 'java'
+}
 
+apply plugin: 'java-library'
+// Para agregar un comando que se llama aggregate, que es de Serenity y es para construir el reporte
+apply plugin: 'net.serenity-bdd.aggregator'
+
+//repositorio para el codigo fuente
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
+//dependencias del codigo fuente
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    // Dependencias para poder automatizar con Serenity
+    implementation 'net.serenity-bdd:serenity-junit:3.4.0'
+    implementation 'net.serenity-bdd:serenity-cucumber:3.4.0'
+    implementation 'net.serenity-bdd:serenity-core:3.4.0'
+    implementation group: 'net.serenity-bdd', name: 'serenity-screenplay-rest', version: '3.4.0'
+    //implementation 'net.serenity-screenplay-webdriver:3.4.0'
+    implementation group: 'net.serenity-bdd', name: 'serenity-screenplay', version: '3.4.0'
+    //implementation group: 'net.serenity-bdd', name: 'serenity-assertions', version: '3.4.0'
+    //implementation 'net.serenity-ensure:3.4.0'
+    implementation 'com.github.javafaker:javafaker:1.0.2'
+    implementation 'org.slf4j:slf4j-simple:1.7.7'
+    implementation 'com.google.guava:guava:19.0'
+    implementation group: 'log4j', name: 'log4j', version: '1.2.17'
+    testImplementation group: 'io.rest-assured', name: 'rest-assured', version: '5.3.0'
+    testImplementation group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    implementation 'redis.clients:jedis:4.3.1'
+    implementation 'org.postgresql:postgresql:42.6.0'
+    implementation files('libs/Jace.jar') //api:5.2.0
+    implementation files('libs/log4j-1.2.14.jar')
 }
 
-tasks.test {
-    useJUnitPlatform()
+// Para configurar propiedades del comando de ejecucion de pruebas con Gradle
+test {
+//Ignorar los fallos es ejecutar todas las pruebas asi alguna falle
+    ignoreFailures = true
 }
+
+// Configurar el encoding del proyecto
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+java {
+    setSourceCompatibility JavaVersion.VERSION_17
+    setTargetCompatibility JavaVersion.VERSION_17
+}
+
+test {
+    String tiporegresion = System.properties['Tiporegresion']
+    println "Tipo de regresion recibido por parametro: " + tiporegresion
+    systemProperty "Tiporegresion", tiporegresion
+
+    switch (tiporegresion) {
+        case "@REGRESION":
+            useJUnit()
+            include('**/ServicioHealthRunner.class*')
+            include('**/ActualizacionParametrosRunner.class*')
+            include('**/ActualizacionClaseDocumentalRunner.class*')
+            maxParallelForks = 1
+            break
+    }
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+// Continue asi falle alguna tarea de Gradle
+gradle.startParameter.continueOnFailure = true
+test.finalizedBy(aggregate)
+
+group 'org.example'
+version '1.0-SNAPSHOT'
