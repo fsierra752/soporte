@@ -1,0 +1,34 @@
+trigger:
+  - master
+
+parameters:
+  - name: deliveryTrain
+    type: object
+    default:
+      continuousTesting:
+        - environment: none
+          cases:
+            - type: service
+              with: serenity
+              timeoutInMinutes: 120
+              agentName: linux-generic
+              sonarQube:
+                serviceConnection: sc-az-solucionescorporativas-pdn_eefce279-9b08-4687-a872-762a8e311aed
+              configure:
+                repo:
+                  name: Gerencia_Tecnologia/1190-idoneidadasesores-pa
+                  branch: master
+                visualTestsCommand: clean build test -DTiporegresion=$(Tiporegresion) aggregate --parallel --max-workers=2
+                visualTestsReportDir: 'target/site/serenity/'
+                javaVersion: 17
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: Gerencia_Tecnologia/ti-templates_pipelines-conf
+      ref: master
+
+extends:
+  template: templates/template-pa.yaml@templates
+  parameters:
+    deliveryTrain: ${{ parameters.deliveryTrain }}    
